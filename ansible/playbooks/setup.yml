@@ -1,0 +1,13 @@
+- name: Install Java 17 and configure JAVA_HOME
+  gather_facts: false
+  hosts: all
+  become: yes
+  tasks:
+    - ansible.builtin.shell:
+        cmd: apt-get install openjdk-17-jdk
+    - name: Set JAVA_HOME environment variable
+      ansible.builtin.lineinfile:
+        path: "/etc/profile"
+        line: "export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
+        create: yes
+        state: present

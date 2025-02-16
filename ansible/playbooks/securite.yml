@@ -1,0 +1,66 @@
+
+- name: Secure the ovh instance
+  hosts: all
+  become: true
+  tasks:
+
+    - name: Mettre à jour les paquets
+      apt:
+        update_cache: yes
+
+    - name: Install UFW and Fail2ban
+      apt:
+        name:
+          - ufw
+          - fail2ban
+        state: present
+
+    - name: Configure UFW - Block all except SSH
+      ufw:
+        state: enabled
+        policy: deny
+        direction: incoming
+
+    - name: Autorize SSH (port 22)
+      ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+
+    - name: Activate UFW
+      ufw:
+        state: enabled
+
+    - name: Configure Fail2ban for SSH
+      copy:
+        dest: /etc/fail2ban/jail.local
+        content: |
+          [sshd]
+          enabled = true
+          port = 22
+          filter = sshd
+          logpath = /var/log/auth.log
+          maxretry = 5
+          bantime = 3600
+          findtime = 600
+      notify:
+        - Restart Fail2ban
+
+    - name: Disable root access for SSH
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+      notify:
+        - Restart SSH
+
+  handlers:
+    - name: Restart SSH
+      service:
+        name: ssh
+        state: restarted
+
+    - name: Restart Fail2ban
+      service:
+        name: fail2ban
+        state: restarted

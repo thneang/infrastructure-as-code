@@ -1,0 +1,46 @@
+- name: Install and configure Nginx with Let's Encrypt SSL
+  hosts: all
+  become: true
+  tasks:
+
+    - name: Install Nginx and Certbot
+      apt:
+        name:
+          - nginx
+          - certbot
+          - python3-certbot-nginx
+        state: present
+        update_cache: yes
+
+    - name: Ensure Nginx is enabled and started
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Allow HTTP and HTTPS traffic in UFW
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "80"
+        - "443"
+
+    - name: Obtain SSL certificate with Certbot
+      command: "certbot --nginx --non-interactive --agree-tos --redirect --hsts --staple-ocsp --email {{email}} -d {{domain}}"
+      args:
+        creates: "/etc/letsencrypt/live/{{domain}}/fullchain.pem"
+
+    - name: Setup automatic SSL certificate renewal
+      cron:
+        name: "Renew Let's Encrypt certificate"
+        job: "certbot renew --quiet"
+        minute: "0"
+        hour: "3"
+
+  handlers:
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted

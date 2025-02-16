@@ -1,0 +1,8 @@
+all:
+  vars:
+    ansible_user: debian
+    domain: thomasdev.cloud
+    email: thneang@gmail.com
+  hosts:
+    thomasdev:
+      ansible_host: 91.134.79.176
