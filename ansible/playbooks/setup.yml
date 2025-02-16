@@ -4,10 +4,43 @@
   become: yes
   tasks:
     - ansible.builtin.shell:
-        cmd: apt-get install openjdk-17-jdk
+        cmd: apt-get install openjdk-17-jdk -y
     - name: Set JAVA_HOME environment variable
       ansible.builtin.lineinfile:
         path: "/etc/profile"
         line: "export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
         create: yes
         state: present
+    - ansible.builtin.shell:
+        cmd: |
+          apt-get install git -y
+          apt-get install npm -y
+
+- name: Add Jenkins repository and key
+  hosts: all
+  become: yes
+  tasks:
+    - name: Download Jenkins key
+      ansible.builtin.get_url:
+        url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+        dest: /usr/share/keyrings/jenkins-keyring.asc
+        mode: '0644'
+
+    - name: Add Jenkins repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/"
+        filename: jenkins
+        state: present
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+    - ansible.builtin.shell:
+        cmd: |
+          apt-get install jenkins -y
+    - name: Start Jenkins service
+      ansible.builtin.systemd:
+        name: jenkins
+        state: started
+        enabled: yes
